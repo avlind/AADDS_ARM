@@ -34,7 +34,7 @@ if ($notPresentRG) {
         DeployTemplate
     }
     else {
-        Write-Host 'Did not create resoruce group'
+        Write-Host 'Did not create resource group'
     }
 }
 else {

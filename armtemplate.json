@@ -137,8 +137,8 @@
         "secondary-subnet-name": "secondary-subnet",
         "storageAccountName": "[concat('bootdiags', uniquestring(resourceGroup().id))]",
         "jumpboxNicName": "jumpboxNic",
-        "jumpboxSubnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnet-name'), variables('jumpbox-subnet-name'))]"
-       
+        "jumpboxSubnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnet-name'), variables('jumpbox-subnet-name'))]",
+        "aadds-nsg-name": "aaddsnsg"
     },
     "resources": [
         //Bastion PIP
@@ -160,6 +160,9 @@
             "name": "[parameters('vnet-name')]",
             "type": "Microsoft.Network/virtualNetworks",
             "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('aadds-nsg-name'))]"
+                ],
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -170,7 +173,10 @@
                     {
                         "name": "[variables('aadds-subnet-name')]",
                         "properties": {
-                            "addressPrefix": "[parameters('aadds-subnet-ip-prefix')]"
+                            "addressPrefix": "[parameters('aadds-subnet-ip-prefix')]",
+                            "networkSecurityGroup": {
+                                    "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/NetworkSecurityGroups/', variables('aadds-nsg-name'))]"
+                                }
                         }
                     },
                     {
@@ -193,6 +199,7 @@
                     }
                 ]
             }
+           
         },
         //Azure Bastion Host
         {
@@ -244,6 +251,57 @@
                 ]
             }
         },
+
+        {
+                            "type": "Microsoft.Network/NetworkSecurityGroups",
+                            "name": "[variables('aadds-nsg-name')]",
+                            "location": "[parameters('location')]",
+                            "properties": {
+                                "securityRules": [
+                                    {
+                                        "name": "AllowSyncWithAzureAD",
+                                        "properties": {
+                                            "access": "Allow",
+                                            "priority": 101,
+                                            "direction": "Inbound",
+                                            "protocol": "Tcp",
+                                            "sourceAddressPrefix": "AzureActiveDirectoryDomainServices",
+                                            "sourcePortRange": "*",
+                                            "destinationAddressPrefix": "*",
+                                            "destinationPortRange": "443"
+                                        }
+                                    },
+                                    {
+                                        "name": "AllowPSRemoting",
+                                        "properties": {
+                                            "access": "Allow",
+                                            "priority": 301,
+                                            "direction": "Inbound",
+                                            "protocol": "Tcp",
+                                            "sourceAddressPrefix": "AzureActiveDirectoryDomainServices",
+                                            "sourcePortRange": "*",
+                                            "destinationAddressPrefix": "*",
+                                            "destinationPortRange": "5986"
+                                        }
+                                    },
+                                    {
+                                        "name": "AllowRD",
+                                        "properties": {
+                                            "access": "Allow",
+                                            "priority": 201,
+                                            "direction": "Inbound",
+                                            "protocol": "Tcp",
+                                            "sourceAddressPrefix": "CorpNetSaw",
+                                            "sourcePortRange": "*",
+                                            "destinationAddressPrefix": "*",
+                                            "destinationPortRange": "3389"
+                                        }
+                                    }
+                                ]
+                            },
+                            "apiVersion": "2019-09-01"
+                        },
+
         //Storage Account for VM Boot Diagnostics
         {
             "type": "Microsoft.Storage/storageAccounts",
@@ -365,6 +423,7 @@
                     "ldaps": "Disabled",
                     "externalAccess": "Disabled"
                 },
+                "sku": "Enterprise",
                 "replicaSets": [
                     {
                         "subnetId":"[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnet-name'), variables('aadds-subnet-name'))]",
