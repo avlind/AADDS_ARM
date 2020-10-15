@@ -2,7 +2,9 @@ param ($rgName)
 
 $RgLocation = "East US"
 $AADJoiningUPN = "domainjoin@aaronmsdn.onmicrosoft.com"
-function DeployTemplate
+$AADJoiningUPNPW = "Pa55.w0rd!"
+
+function DeployTemplate 
 {
     New-AzResourceGroupDeployment -ResourceGroupName $rgname -TemplateFile .\armtemplate.json -TemplateParameterFile .\armtemplate.parameters.json -Confirm
 }
@@ -18,6 +20,12 @@ function SetupAADDSPreReqs
     }
 
     $UserObjectId = Get-AzADUser -UserPrincipalName $AADJoiningUPN 
+
+    # Create Domain Join Acct 
+    if (-not $UserObjectId) {
+        $SecureStringPassword = ConvertTo-SecureString -String $AADJoiningUPNPW -AsPlainText -Force
+        New-AzADUser -DisplayName "Domain Join Acct" -UserPrincipalName "domainjoin@aaronmsdn.onmicrosoft.com" -Password $SecureStringPassword -MailNickname "DomainJoin"
+    }
 
     # Add the user to the 'AAD DC Administrators' group.
     Add-AzADGroupMember  -TargetGRoupObjectId $GroupObjectId.Id -MemberObjectId $UserObjectId.Id -ErrorAction SilentlyContinue

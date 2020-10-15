@@ -2,7 +2,7 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-"vnet-name": {
+        "vnet-name": {
             "type": "string",
             "defaultValue": "vnet01",
             "metadata": {
@@ -23,7 +23,7 @@
                 "description": "AADDS subnet IP prefix MUST be within vnet IP prefix address space"
             }
         },
-        
+
         "bastion-subnet-ip-prefix": {
             "type": "string",
             "defaultValue": "10.1.1.0/27",
@@ -82,14 +82,43 @@
                 "description": "Size of the tools virtual machine."
             }
         },
+        "demoVmSize": {
+            "type": "string",
+            "defaultValue": "Standard_D2_v3",
+            "metadata": {
+                "description": "Size of the demo virtual machine."
+            }
+        },
         "domainName": {
             "type": "string",
-            "defaultValue": "mysweetdomain.com",
+            "defaultValue": "scriptdomain.com",
             "metadata": {
                 "description": "Domain Name"
             }
         },
-        "toolsOSVersion": {
+        "jumpboxOSVersion": {
+            "type": "string",
+            "defaultValue": "2019-Datacenter",
+            "allowedValues": [
+                "2012-Datacenter",
+                "2012-R2-Datacenter",
+                "2016-Nano-Server",
+                "2016-Datacenter-with-Containers",
+                "2016-Datacenter",
+                "2019-Datacenter",
+                "2019-Datacenter-Core",
+                "2019-Datacenter-Core-smalldisk",
+                "2019-Datacenter-Core-with-Containers",
+                "2019-Datacenter-Core-with-Containers-smalldisk",
+                "2019-Datacenter-smalldisk",
+                "2019-Datacenter-with-Containers",
+                "2019-Datacenter-with-Containers-smalldisk"
+            ],
+            "metadata": {
+                "description": "The Windows version for the VM. This will pick a fully patched image of this given Windows version."
+            }
+        },
+        "demoVMOSVersion": {
             "type": "string",
             "defaultValue": "2019-Datacenter",
             "allowedValues": [
@@ -125,9 +154,6 @@
                 "description": "Password Local Admin Account for the Virtual Machine."
             }
         }
-
-
-
     },
     "variables": {
         "public-ip-address-name": "[concat(parameters('bastion-host-name'),'-pip')]",
@@ -138,7 +164,11 @@
         "storageAccountName": "[concat('bootdiags', uniquestring(resourceGroup().id))]",
         "jumpboxNicName": "jumpboxNic",
         "jumpboxSubnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnet-name'), variables('jumpbox-subnet-name'))]",
-        "aadds-nsg-name": "aaddsnsg"
+        "secondarySubnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnet-name'), variables('secondary-subnet-name'))]",
+        "aadds-nsg-name": "aaddsnsg",
+        "demoVMName": "demovm",
+        "demoVMNicName": "demoVmNic"
+        
     },
     "resources": [
         //Bastion PIP
@@ -162,7 +192,7 @@
             "location": "[parameters('location')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', variables('aadds-nsg-name'))]"
-                ],
+            ],
             "properties": {
                 "addressSpace": {
                     "addressPrefixes": [
@@ -175,8 +205,8 @@
                         "properties": {
                             "addressPrefix": "[parameters('aadds-subnet-ip-prefix')]",
                             "networkSecurityGroup": {
-                                    "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/NetworkSecurityGroups/', variables('aadds-nsg-name'))]"
-                                }
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/NetworkSecurityGroups/', variables('aadds-nsg-name'))]"
+                            }
                         }
                     },
                     {
@@ -199,7 +229,7 @@
                     }
                 ]
             }
-           
+
         },
         //Azure Bastion Host
         {
@@ -227,7 +257,7 @@
                 ]
             }
         },
-        //NSGs
+        //Default NSG
         {
             "type": "Microsoft.Network/networkSecurityGroups",
             "apiVersion": "2019-02-01",
@@ -251,57 +281,56 @@
                 ]
             }
         },
-
+        //AADDS NSG
         {
-                            "type": "Microsoft.Network/NetworkSecurityGroups",
-                            "name": "[variables('aadds-nsg-name')]",
-                            "location": "[parameters('location')]",
-                            "properties": {
-                                "securityRules": [
-                                    {
-                                        "name": "AllowSyncWithAzureAD",
-                                        "properties": {
-                                            "access": "Allow",
-                                            "priority": 101,
-                                            "direction": "Inbound",
-                                            "protocol": "Tcp",
-                                            "sourceAddressPrefix": "AzureActiveDirectoryDomainServices",
-                                            "sourcePortRange": "*",
-                                            "destinationAddressPrefix": "*",
-                                            "destinationPortRange": "443"
-                                        }
-                                    },
-                                    {
-                                        "name": "AllowPSRemoting",
-                                        "properties": {
-                                            "access": "Allow",
-                                            "priority": 301,
-                                            "direction": "Inbound",
-                                            "protocol": "Tcp",
-                                            "sourceAddressPrefix": "AzureActiveDirectoryDomainServices",
-                                            "sourcePortRange": "*",
-                                            "destinationAddressPrefix": "*",
-                                            "destinationPortRange": "5986"
-                                        }
-                                    },
-                                    {
-                                        "name": "AllowRD",
-                                        "properties": {
-                                            "access": "Allow",
-                                            "priority": 201,
-                                            "direction": "Inbound",
-                                            "protocol": "Tcp",
-                                            "sourceAddressPrefix": "CorpNetSaw",
-                                            "sourcePortRange": "*",
-                                            "destinationAddressPrefix": "*",
-                                            "destinationPortRange": "3389"
-                                        }
-                                    }
-                                ]
-                            },
-                            "apiVersion": "2019-09-01"
-                        },
-
+            "type": "Microsoft.Network/NetworkSecurityGroups",
+            "name": "[variables('aadds-nsg-name')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "AllowSyncWithAzureAD",
+                        "properties": {
+                            "access": "Allow",
+                            "priority": 101,
+                            "direction": "Inbound",
+                            "protocol": "Tcp",
+                            "sourceAddressPrefix": "AzureActiveDirectoryDomainServices",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "443"
+                        }
+                    },
+                    {
+                        "name": "AllowPSRemoting",
+                        "properties": {
+                            "access": "Allow",
+                            "priority": 301,
+                            "direction": "Inbound",
+                            "protocol": "Tcp",
+                            "sourceAddressPrefix": "AzureActiveDirectoryDomainServices",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "5986"
+                        }
+                    },
+                    {
+                        "name": "AllowRD",
+                        "properties": {
+                            "access": "Allow",
+                            "priority": 201,
+                            "direction": "Inbound",
+                            "protocol": "Tcp",
+                            "sourceAddressPrefix": "CorpNetSaw",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "3389"
+                        }
+                    }
+                ]
+            },
+            "apiVersion": "2019-09-01"
+        },
         //Storage Account for VM Boot Diagnostics
         {
             "type": "Microsoft.Storage/storageAccounts",
@@ -314,7 +343,6 @@
             "kind": "Storage",
             "properties": {}
         },
-
         //Jump VM NIC
         {
             "type": "Microsoft.Network/networkInterfaces",
@@ -332,6 +360,29 @@
                             "privateIPAllocationMethod": "Dynamic",
                             "subnet": {
                                 "id": "[variables('jumpboxSubnetRef')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        //Demo VM NIC
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2020-05-01",
+            "name": "[variables('demoVMNicName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnet-name'))]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('secondarySubnetRef')]"
                             }
                         }
                     }
@@ -361,7 +412,7 @@
                     "imageReference": {
                         "publisher": "MicrosoftWindowsServer",
                         "offer": "WindowsServer",
-                        "sku": "[parameters('toolsOSVersion')]",
+                        "sku": "[parameters('jumpboxOSVersion')]",
                         "version": "latest"
                     },
                     "osDisk": {
@@ -393,6 +444,61 @@
                 }
             }
         },
+        //Demo VM
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2018-10-01",
+            "name": "[variables('demoVMName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('demoVMNicName'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('demoVmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "DEMOVM1",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "[parameters('demoVMOSVersion')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "StandardSSD_LRS"
+                        }
+                    },
+                    "dataDisks": [
+                        {
+                            "diskSizeGB": 1023,
+                            "lun": 0,
+                            "createOption": "Empty"
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('demoVMNicName'))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))).primaryEndpoints.blob]"
+                    }
+                }
+            }
+        },
         //Managed Domain
         {
             "apiVersion": "2020-01-01",
@@ -400,24 +506,24 @@
             "name": "[parameters('domainName')]",
             "location": "[parameters('location')]",
             "tags": {
-                "managed_by"  : "Aaron's Sweet ARM"
+                "managed_by": "Aaron's Sweet ARM"
             },
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnet-name'))]"
-                ],
+            ],
             "properties": {
                 "domainName": "[parameters('domainName')]",
                 "filteredSync": "Disabled",
                 "domainConfigurationType": "ResourceTrusting",
                 "notificationSettings": {
                     "notifyGlobalAdmins": "Disabled",
-                    "notifyDcAdmins" : "Disabled",
+                    "notifyDcAdmins": "Disabled",
                     "additionalRecipients": []
                 },
                 "domainSecuritySettings": {
-                  "ntlmV1": "Disabled",
-                  "tlsV1": "Disabled",
-                  "syncNtlmPasswords": "Disabled"
+                    "ntlmV1": "Disabled",
+                    "tlsV1": "Disabled",
+                    "syncNtlmPasswords": "Disabled"
                 },
                 "ldapsSettings": {
                     "ldaps": "Disabled",
@@ -426,7 +532,7 @@
                 "sku": "Enterprise",
                 "replicaSets": [
                     {
-                        "subnetId":"[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnet-name'), variables('aadds-subnet-name'))]",
+                        "subnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnet-name'), variables('aadds-subnet-name'))]",
                         "location": "[parameters('location')]"
                     }
                 ]
