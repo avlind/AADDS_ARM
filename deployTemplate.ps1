@@ -18,8 +18,7 @@ function SetupAADDSPreReqs {
     # Look for an existing ServicePrincipal for the ApplicationId
     $ServicePrincipal = Get-AzADServicePrincipal -ApplicationId "2565bd9d-da50-47d4-8b85-4c97f669dc36"
     
-    if($ServicePrincipal)
-    {
+    if ($ServicePrincipal) {
         Write-Host 'Service Principal already exists.' -ForegroundColor Yellow
     }
 
@@ -35,10 +34,9 @@ function SetupAADDSPreReqs {
     # Get the Group Object
     $GroupObjectID = Get-AzADGroup -DisplayName "AAD DC Administrators"
 
-if($GroupObjectID)
-{
-    Write-Host 'Group already exists.' -ForegroundColor Yellow
-}
+    if ($GroupObjectID) {
+        Write-Host 'Group already exists.' -ForegroundColor Yellow
+    }
     
     if (-not $GroupObjectId) {
         Write-Host 'Did not find GroupObjectId. Creating a new one... ' -ForegroundColor Yellow -NoNewLine 
