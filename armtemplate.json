@@ -171,6 +171,8 @@
         
     },
     "resources": [
+        
+        /*
         //Bastion PIP
         {
             "apiVersion": "2020-05-01",
@@ -184,6 +186,7 @@
                 "publicIPAllocationMethod": "Static"
             }
         },
+        */
         //VNET and Subnets
         {
             "apiVersion": "2020-05-01",
@@ -231,6 +234,7 @@
             }
 
         },
+        /*
         //Azure Bastion Host
         {
             "apiVersion": "2020-05-01",
@@ -257,6 +261,8 @@
                 ]
             }
         },
+        */
+        /*
         //Default NSG
         {
             "type": "Microsoft.Network/networkSecurityGroups",
@@ -281,6 +287,7 @@
                 ]
             }
         },
+        */
         //AADDS NSG
         {
             "type": "Microsoft.Network/NetworkSecurityGroups",
@@ -331,6 +338,7 @@
             },
             "apiVersion": "2019-09-01"
         },
+        /*
         //Storage Account for VM Boot Diagnostics
         {
             "type": "Microsoft.Storage/storageAccounts",
@@ -343,6 +351,8 @@
             "kind": "Storage",
             "properties": {}
         },
+        */
+        /*
         //Jump VM NIC
         {
             "type": "Microsoft.Network/networkInterfaces",
@@ -366,6 +376,8 @@
                 ]
             }
         },
+        */
+        /*
         //Demo VM NIC
         {
             "type": "Microsoft.Network/networkInterfaces",
@@ -389,6 +401,8 @@
                 ]
             }
         },
+        */
+        /*
         //Jump VM
         {
             "type": "Microsoft.Compute/virtualMachines",
@@ -444,6 +458,8 @@
                 }
             }
         },
+        */
+        /*
         //Demo VM
         {
             "type": "Microsoft.Compute/virtualMachines",
@@ -499,6 +515,7 @@
                 }
             }
         },
+        */
         //Managed Domain
         {
             "apiVersion": "2020-01-01",

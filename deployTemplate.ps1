@@ -41,7 +41,7 @@ function SetupAADDSPreReqs {
     if (-not $GroupObjectId) {
         Write-Host 'Did not find GroupObjectId. Creating a new one... ' -ForegroundColor Yellow -NoNewLine 
         New-AzADGroup -DisplayName "AAD DC Administrators" -Description "Delegated group to administer Azure AD Domain Services" -MailNickName "AADDCAdministrators"
-        Write-Host 'Created new Azure AD Group.'
+        Write-Host 'Created new Azure AD Group.' -ForegroundColor Green
 
         # Set the group to the local variable
         $GroupObjectId = Get-AzADGroup -DisplayName "AAD DC Administrators"
@@ -50,7 +50,7 @@ function SetupAADDSPreReqs {
 
     # Look for an existing domain joining account
     $UserObjectId = Get-AzADUser -UserPrincipalName $AADJoiningUPN 
-    Write-Host 'Looking for domain joining account.' -ForegroundColor -Yellow
+    Write-Host 'Looking for domain joining account.' -ForegroundColor Yellow
     
     if ($UserObjectId) {
         Write-Host 'Domain Join account exists in AAD.' -ForegroundColor Yellow
